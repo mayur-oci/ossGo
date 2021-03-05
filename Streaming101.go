@@ -24,23 +24,40 @@ func getMsgWithGroupCursor(streamEndpoint string, streamOcid string) {
 	client, err := streaming.NewStreamClientWithConfigurationProvider(common.DefaultConfigProvider(), streamEndpoint)
 	helpers.FatalIfError(err)
 
-	// Create a request and dependent object(s).
-
-	grpCursorCreateReq := streaming.CreateGroupCursorRequest{OpcRequestId: common.String("UR3R29BONB3MB5GP1KAC/OpcRequestIdExample/<unique_ID>"),
-		StreamId: common.String("ocid1.test.oc1..<unique_ID>EXAMPLE-streamId-Value"),
+	grpCursorCreateReq := streaming.CreateGroupCursorRequest{
+		StreamId: common.String(streamOcid),
 		CreateGroupCursorDetails: streaming.CreateGroupCursorDetails{Type: streaming.CreateGroupCursorDetailsTypeTrimHorizon,
 			CommitOnGet:  common.Bool(true),
-			GroupName:    common.String("EXAMPLE-groupName-Value"),
-			InstanceName: common.String("EXAMPLE-instanceName-Value"),
-			Time:         &common.SDKTime{Time: time.Now()},
-			TimeoutInMs:  common.Int(746)}}
+			GroupName:    common.String("Go-groupname-0"),
+			InstanceName: common.String("Go-groupname-0-instancename-0"),
+			TimeoutInMs:  common.Int(1000),
+		}}
 
 	// Send the request using the service client
-	resp, err := client.CreateGroupCursor(context.Background(), grpCursorCreateReq)
+	grpCursorResp, err := client.CreateGroupCursor(context.Background(), grpCursorCreateReq)
 	helpers.FatalIfError(err)
-
 	// Retrieve value from the response.
-	fmt.Println(resp)
+	fmt.Println(grpCursorResp)
+
+	simpleGetMsgLoop(client, streamOcid, *grpCursorResp.Value)
+}
+
+func simpleGetMsgLoop(streamClient streaming.StreamClient, streamOcid string, cursorValue string) {
+
+	for i := 0; i < 5; i++ {
+		getMsgReq := streaming.GetMessagesRequest{Limit: common.Int(2),
+			StreamId: common.String(streamOcid),
+			Cursor:   common.String(cursorValue)}
+
+		// Send the request using the service client
+		getMsgResp, err := streamClient.GetMessages(context.Background(), getMsgReq)
+		helpers.FatalIfError(err)
+
+		// Retrieve value from the response.
+		fmt.Println("Key : " + string(getMsgResp.Items[0].Key) + ", value : " + string(getMsgResp.Items[0].Value))
+
+		cursorValue = *getMsgResp.OpcNextCursor
+	}
 }
 
 func putMsgInStream(streamEndpoint string, streamOcid string) {
