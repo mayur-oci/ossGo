@@ -18,6 +18,10 @@ func main() {
 
 	putMsgInStream(*ossStream.MessagesEndpoint, *ossStream.Id)
 
+	time.Sleep(5 * time.Second)
+
+	getMsgWithGroupCursor(*ossStream.MessagesEndpoint, *ossStream.Id)
+
 }
 
 func getMsgWithGroupCursor(streamEndpoint string, streamOcid string) {
@@ -54,8 +58,12 @@ func simpleGetMsgLoop(streamClient streaming.StreamClient, streamOcid string, cu
 		helpers.FatalIfError(err)
 
 		// Retrieve value from the response.
-		fmt.Println("Key : " + string(getMsgResp.Items[0].Key) + ", value : " + string(getMsgResp.Items[0].Value))
-
+		if len(getMsgResp.Items) > 0 {
+			fmt.Println("Key : " + string(getMsgResp.Items[0].Key) + ", value : " + string(getMsgResp.Items[0].Value) + ", Partition " + *getMsgResp.Items[0].Partition)
+		}
+		if len(getMsgResp.Items) > 1 {
+			fmt.Println("Key : " + string(getMsgResp.Items[1].Key) + ", value : " + string(getMsgResp.Items[1].Value) + ", Partition " + *getMsgResp.Items[1].Partition)
+		}
 		cursorValue = *getMsgResp.OpcNextCursor
 	}
 }
@@ -94,7 +102,7 @@ func getOrCreateStream() streaming.Stream {
 	// Create a request and dependent object(s).
 
 	createStreamPoolReq := streaming.CreateStreamPoolRequest{
-		CreateStreamPoolDetails: streaming.CreateStreamPoolDetails{Name: common.String("streampool-go-example"),
+		CreateStreamPoolDetails: streaming.CreateStreamPoolDetails{Name: common.String("streampool-go-example-10"),
 			CompartmentId: common.String(cmptID)},
 		OpcRequestId:    new(string),
 		OpcRetryToken:   new(string),
@@ -114,7 +122,7 @@ func getOrCreateStream() streaming.Stream {
 
 	streamReq := streaming.CreateStreamRequest{
 		CreateStreamDetails: streaming.CreateStreamDetails{Name: common.String("stream-go-example"),
-			Partitions:       common.Int(2),
+			Partitions:       common.Int(1),
 			RetentionInHours: common.Int(24),
 			StreamPoolId:     common.String(*streampoolRsp.Id)}}
 
