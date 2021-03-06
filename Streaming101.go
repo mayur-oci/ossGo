@@ -65,6 +65,8 @@ func simpleGetMsgLoop(streamClient streaming.StreamClient, streamOcid string, cu
 			fmt.Println("Key : " + string(getMsgResp.Items[1].Key) + ", value : " + string(getMsgResp.Items[1].Value) + ", Partition " + *getMsgResp.Items[1].Partition)
 		}
 		cursorValue = *getMsgResp.OpcNextCursor
+
+		time.Sleep(1 * time.Second) // to avoid throttling
 	}
 }
 
@@ -102,7 +104,7 @@ func getOrCreateStream() streaming.Stream {
 	// Create a request and dependent object(s).
 
 	createStreamPoolReq := streaming.CreateStreamPoolRequest{
-		CreateStreamPoolDetails: streaming.CreateStreamPoolDetails{Name: common.String("streampool-go-example-10"),
+		CreateStreamPoolDetails: streaming.CreateStreamPoolDetails{Name: common.String("streampool-go-example-10-6"),
 			CompartmentId: common.String(cmptID)},
 		OpcRequestId:    new(string),
 		OpcRetryToken:   new(string),
