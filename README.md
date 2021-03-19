@@ -92,6 +92,71 @@ go run Consumer.go
 2. Open your favorite editor, such as [Visual Studio Code](https://code.visualstudio.com) from the directory say *wd*. 
 3.  Create new file named *Consumer.go* in this directory and paste the following code in it. Change the values constants namely *ociMessageEndpoint, ociStreamOcid, ociConfigFilePath and ociProfileName*, as per your environment. Save the file editor you are using.
 ```Go
+package main
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/oracle/oci-go-sdk/v36/common"
+	"github.com/oracle/oci-go-sdk/v36/example/helpers"
+	"github.com/oracle/oci-go-sdk/v36/streaming"
+)
+
+const ociMessageEndpoint = "https://cell-1.streaming.ap-mumbai-1.oci.oraclecloud.com"
+const ociStreamOcid = "ocid1.stream.oc1.ap-mumbai-1.amaaaaaauwpiejqaxcfc2ht67wwohfg7mxcstfkh2kp3hweeenb3zxtr5khq"
+const ociConfigFilePath = "C:\\.oci\\config"
+const ociProfileName = "DEFAULT"
+
+func main() {
+	fmt.Println("Go oci oss sdk example for consumer")
+	getMsgWithGroupCursor(ociMessageEndpoint, ociStreamOcid)
+}
+
+func getMsgWithGroupCursor(streamEndpoint string, streamOcid string) {
+	client, err := streaming.NewStreamClientWithConfigurationProvider(common.DefaultConfigProvider(), streamEndpoint)
+	helpers.FatalIfError(err)
+
+	grpCursorCreateReq0 := streaming.CreateGroupCursorRequest{
+		StreamId: common.String(streamOcid),
+		CreateGroupCursorDetails: streaming.CreateGroupCursorDetails{Type: streaming.CreateGroupCursorDetailsTypeTrimHorizon,
+			CommitOnGet:  common.Bool(true),
+			GroupName:    common.String("Go-groupname-0"),
+			InstanceName: common.String("Go-groupname-0-instancename-0"),
+			TimeoutInMs:  common.Int(1000),
+		}}
+
+	// Send the request using the service client
+	grpCursorResp0, err := client.CreateGroupCursor(context.Background(), grpCursorCreateReq0)
+	helpers.FatalIfError(err)
+	// Retrieve value from the response.
+	fmt.Println(grpCursorResp0)
+
+	simpleGetMsgLoop(client, streamOcid, *grpCursorResp0.Value)
+}
+
+func simpleGetMsgLoop(streamClient streaming.StreamClient, streamOcid string, cursorValue string) {
+
+	for i := 0; i < 5; i++ {
+		getMsgReq := streaming.GetMessagesRequest{Limit: common.Int(3),
+			StreamId: common.String(streamOcid),
+			Cursor:   common.String(cursorValue)}
+
+		// Send the request using the service client
+		getMsgResp, err := streamClient.GetMessages(context.Background(), getMsgReq)
+		helpers.FatalIfError(err)
+
+		// Retrieve value from the response.
+		if len(getMsgResp.Items) > 0 {
+			fmt.Println("Key : " + string(getMsgResp.Items[0].Key) + ", value : " + string(getMsgResp.Items[0].Value) + ", Partition " + *getMsgResp.Items[0].Partition)
+		}
+		if len(getMsgResp.Items) > 1 {
+			fmt.Println("Key : " + string(getMsgResp.Items[1].Key) + ", value : " + string(getMsgResp.Items[1].Value) + ", Partition " + *getMsgResp.Items[1].Partition)
+		}
+		cursorValue = *getMsgResp.OpcNextCursor
+
+	}
+}
 
 
 ```
@@ -107,21 +172,15 @@ go run Consumer.go
 ```
 5. You should see the messages as shown below. Note when we produce message from OCI Web Console(as described above in first step), the Key for each message is *Null*.
 ```
-$:/path/to/directory/wd>node Consumer.js
-Starting a simple message loop with a group cursor
-Creating a cursor for group exampleGroup, instance exampleInstance-1.
-Read 1 messages.
-Null: Example Test Message 0
-Read 1 messages.
-Null: Example Test Message 0
-Read 1 messages.
-Null: Example Test Message 0
-Read 2 messages.
-Null: Example Test Message 0
-Null: Example Test Message 0
-Read 2 messages.
-Null: Example Test Message 0
-Null: Example Test Message 0
+$:/path/to/directory/wd>go run Consumer.go
+Go oci oss sdk example for consumer
+{ RawResponse={200 OK 200 HTTP/1.1 1 1 map[Access-Control-Allow-Credentials:[true] Access-Control-Allow-Methods:[POST,PUT,GET,HEAD,DELETE,OPTIONS] Access-Control-Allow-Origin:[*] Access-Control-Expose-Headers:[access-control-allow-credentials,access-control-allow-methods,access-control-allow-origin,connection,content-length,content-type,opc-client-info,opc-request-id] Connection:[keep-alive] Content-Length:[432] Content-Type:[application/json] Opc-Request-Id:[07f00ea758075ca8ad9c9be649502a45/1B9AF2861AE7A05EC11BEBB662215868/1F05E6A5B860282188F223E3B085AE8A]] 0xc000214020 432 [] false false map[] 0xc00012c300 0xc0000f8420} Cursor={ Value=eyJjdXJzb3JUeXBlIjoiZ3JvdXAiLCJzdHJlYW1JZCI6Im9jaWQxLnN0cmVhbS5vYzEuYXAtbXVtYmFpLTEuYW1hYWFhYWF1d3BpZWpxYXhjZmMyaHQ2N3d3b2hmZzdteGNzdGZraDJrcDNod2VlZW5iM3p4dHI1a2hxIiwiZXhwaXJhdGlvbiI6MTYxNjE2NTY1ODQwMCwiZ3JvdXBOYW1lIjoiR28tZ3JvdXBuYW1lLTAiLCJpbnN0YW5jZU5hbWUiOiJHby1ncm91cG5hbWUtMC1pbnN0YW5jZW5hbWUtMCIsIm9mZnNldHMiOnt9LCJjb21taXRPbkdldCI6dHJ1ZSwiZ2VuZXJhdGlvbiI6MCwidGltZW91dEluTXMiOjEwMDAsImN1cnNvclR5cGUiOiJncm91cCJ9 } OpcRequestId=07f00ea758075ca8ad9c9be649502a45/1B9AF2861AE7A05EC11BEBB662215868/1F05E6A5B860282188F223E3B085AE8A }
+Key : , value : Example Test Message 0, Partition 0
+Key : , value : Example Test Message 0, Partition 0
+Key : , value : Example Test Message 0, Partition 0
+Key : , value : Example Test Message 0, Partition 0
+Key : , value : Example Test Message 0, Partition 0
+
 ```
 
 ## Next Steps
