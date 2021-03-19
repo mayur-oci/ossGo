@@ -98,7 +98,7 @@ go run Consumer.go
 4. Open the terminal. Change the working directory to the same directory *wd*. Execute the following commands from the terminal now, one after the other.
 ```
 #this command creates go.mod file in the wd directory
-go mod init oss_producer_example/v0 
+go mod init oss_consumer_example/v0 
 
 #this will install OCI Go SDK for OSS
 go mod tidy 
